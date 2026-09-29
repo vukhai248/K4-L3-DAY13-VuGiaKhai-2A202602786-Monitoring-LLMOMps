@@ -8,7 +8,7 @@
 - **MSSV:** 2A202602786
 - **Lớp:** K4-L3A
 - **Repository URL:** https://github.com/vukhai248/K4-L3-DAY13-VuGiaKhai-2A202602786-onitoring-LLMOMps
-- **Commit SHA cuối:** 1e5a8f3
+- **Commit SHA cuối:** 8540405
 - **Challenge ID:** day13-k4-l3a-monitoring-llmops-v1
 - **Tên project Langfuse cá nhân:** `day13-k4-l3a-2A202602786`
 
@@ -125,17 +125,17 @@ Baseline đo trên starter tại commit `13b6066`, trước khi sửa TODO (xem 
   - Panel **TTFT** duy trì ổn định ở mức 50ms, chứng tỏ không có sự suy giảm hiệu năng tại tầng suy luận của LLM (`FakeLLM.generate`) mà sự cố xảy ra trước khi bắt đầu sinh token đầu tiên.
   - Panel **Errors** không có request nào bị HTTP 5xx hay `request_failed`, cho thấy hệ thống không bị crash mà chỉ bị nghẽn độ trễ.
 - **Log line và correlation ID liên quan:**
-  - Correlation ID đại diện: `req-12595250`
+  - Correlation ID đại diện: `req-d6d4be1d` (kèm theo các request sự cố tương tự như `req-12595250`)
   - Dòng log trích xuất từ `data/logs.jsonl`:
     ```json
-    {"service": "api", "latency_ms": 3499, "ttft_ms": 50, "tokens_in": 36, "tokens_out": 130, "cost_usd": 0.002058, "quality_score": 0.9, "tool_name": "retrieval", "tool_success": true, "payload": {"answer_preview": "Starter answer. You should improve this output logic and add better quality chec..."}, "event": "response_sent", "model": "claude-sonnet-4-5", "user_id_hash": "u4570299f37e2", "session_id": "k4-l3a-challenge-s04", "env": "dev", "feature": "monitoring", "correlation_id": "req-12595250", "level": "info", "ts": "2026-09-29T09:22:29.474864Z"}
+    {"service": "api", "latency_ms": 2690, "ttft_ms": 55, "tokens_in": 35, "tokens_out": 178, "cost_usd": 0.002775, "quality_score": 0.8, "tool_name": "retrieval", "tool_success": true, "payload": {"answer_preview": "Starter answer. You should improve this output logic and add better quality chec..."}, "event": "response_sent", "correlation_id": "req-d6d4be1d", "env": "dev", "feature": "monitoring", "user_id_hash": "udde2e75b20cf", "session_id": "k4-l3a-challenge-s01", "model": "claude-sonnet-4-5", "level": "info", "ts": "2026-09-29T09:54:56.222137Z"}
     ```
 - **Trace ID và span gây ảnh hưởng:**
-  - Trace tương ứng với `correlation_id: req-12595250`.
-  - Cây trace quan sát trong request:
-    - Root span `lab-agent-run`: tổng thời gian 3499ms.
-    - Child span `retrieval` (loại `retriever`): tiêu tốn tới **3350ms** (chiếm ~96% tổng thời gian request).
-    - Child span `generation` (loại `generation`): chỉ tốn **150ms** với `ttft_ms = 50ms`.
+  - Trace tương ứng với `correlation_id: req-d6d4be1d` (Trace ID trên Langfuse: `c8bc87efb3d69ca59c5b18108f04a88a`).
+  - Cây trace quan sát trong request (xem minh chứng `evidence/08-trace-metadata.png` và `evidence/14-incident-trace.png`):
+    - Root span `lab-agent-run`: tổng thời gian 2.70s (2690ms).
+    - Child span `retrieval` (loại `retriever`): tiêu tốn tới **2.50s** (chiếm ~93% tổng thời gian request).
+    - Child span `generation` (loại `generation`): chỉ tốn **0.16s** (160ms) với `ttft_ms = 55ms` và chi phí $0.002775.
   - Span gây ảnh hưởng chính và là nguyên nhân gây chậm là span `retrieval`.
 - **Root cause:**
   - Sự cố tắc nghẽn I/O tại khâu truy xuất dữ liệu vector store (`rag_slow` thêm 2.5s độ trễ trong hàm `retrieve()`), khiến toàn bộ tiến trình của agent bị chặn kéo dài trước khi chuyển prompt sang mô hình ngôn ngữ.
