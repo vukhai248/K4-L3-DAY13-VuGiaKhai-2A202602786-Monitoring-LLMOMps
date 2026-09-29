@@ -67,3 +67,21 @@ def test_agent_records_prompt_version_with_v4_observation_api(monkeypatch) -> No
     assert span_update["version"] == "3"
     assert propagated[0]["metadata"]["correlation_id"] == "req-12345678"
     assert propagated[-1]["prompt"] is client.prompt
+
+
+def test_agent_runs_with_child_observations(monkeypatch) -> None:
+    monkeypatch.setenv("APP_ENV", "test")
+    agent = agent_module.LabAgent()
+    res = agent.run(
+        user_id="student-02",
+        feature="qa",
+        session_id="session-02",
+        message="Explain latency percentiles",
+        correlation_id="req-87654321",
+    )
+    assert res.answer
+    assert res.latency_ms > 0
+    assert res.tokens_in > 0
+    assert res.tokens_out > 0
+    assert res.cost_usd > 0
+    assert 0.0 <= res.quality_score <= 1.0
