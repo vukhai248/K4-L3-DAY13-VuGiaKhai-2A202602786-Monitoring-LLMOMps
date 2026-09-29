@@ -1,0 +1,15 @@
+﻿# CP0 BASELINE - 2026-09-29T05:51:15Z
+# Repo: K4-L3-DAY13-VuGiaKhai-2A202602786-Monitoring-LLMOps
+# Commit truoc khi sua code: 13b6066
+# Baseline la do tren starter, truoc khi hoan thanh TODO cua CP1.
+[200] MISSING | qa | 896.3ms
+[200] MISSING | qa | 392.2ms
+[200] MISSING | summary | 393.3ms
+[200] MISSING | qa | 388.5ms
+[200] MISSING | qa | 390.3ms
+[200] MISSING | summary | 389.7ms
+[200] MISSING | qa | 388.0ms
+[200] MISSING | qa | 392.0ms
+[200] MISSING | qa | 387.1ms
+[200] MISSING | qa | 391.6ms
+

@@ -1,0 +1,6 @@
+﻿# CP0 BASELINE - 2026-09-29T05:51:15Z
+# Repo: K4-L3-DAY13-VuGiaKhai-2A202602786-Monitoring-LLMOps
+# Commit truoc khi sua code: 13b6066
+# Baseline la do tren starter, truoc khi hoan thanh TODO cua CP1.
+Hß╗óP Lß╗å: 6/6 panel c├│ trong dashboard contract.
+

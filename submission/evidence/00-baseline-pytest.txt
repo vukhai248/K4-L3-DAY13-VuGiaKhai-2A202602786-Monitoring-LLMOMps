@@ -1,0 +1,18 @@
+﻿# CP0 BASELINE - 2026-09-29T05:51:15Z
+# Repo: K4-L3-DAY13-VuGiaKhai-2A202602786-Monitoring-LLMOps
+# Commit truoc khi sua code: 13b6066
+# Baseline la do tren starter, truoc khi hoan thanh TODO cua CP1.
+
+$ .\.venv\Scripts\python.exe -m pytest -q
+......................                                                   [100%]
+22 passed in 2.78s
+
+# Ghi chu (blocker phat hien tai CP0):
+# Langfuse SDK 4.15.6 in ra dong canh bao khi export span:
+#   Failed to export spans batch code: 401, reason: Unauthorized
+# Kiem tra lai bang API cong khai cua cloud.langfuse.com cho thay
+# GET /api/public/traces tra 401 "Invalid character. Confirm that you've
+# configured the correct host." => key pair trong .env khong hop le voi
+# host nay. Endpoint /api/public/health tra 200 nhung khong yeu cau auth
+# (key sai gia tri cung tra 200) nen khong duoc dung lam bang chung.
+# Haung key da duoc dung cho toi CP0 vi khong co phu thuoc vao Langfuse.

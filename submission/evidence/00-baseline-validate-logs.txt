@@ -1,0 +1,19 @@
+﻿# CP0 BASELINE - 2026-09-29T05:51:15Z
+# Repo: K4-L3-DAY13-VuGiaKhai-2A202602786-Monitoring-LLMOps
+# Commit truoc khi sua code: 13b6066
+# Baseline la do tren starter, truoc khi hoan thanh TODO cua CP1.
+--- Lab Verification Results ---
+Total log records analyzed: 40
+Records with missing required fields: 40
+Records with missing enrichment (context): 40
+Unique correlation IDs found: 0
+Potential PII leaks detected: 0
+
+--- Grading Scorecard (Estimates) ---
+- [FAILED] Missing required fields (ts, level, etc.)
+- [FAILED] Correlation ID propagation (less than 2 unique IDs)
+- [FAILED] Log enrichment (missing user_id_hash, etc.)
++ [PASSED] PII scrubbing
+
+Estimated Score: 30/100
+

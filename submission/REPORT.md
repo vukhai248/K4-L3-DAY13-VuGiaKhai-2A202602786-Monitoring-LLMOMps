@@ -4,13 +4,13 @@
 
 ## 1. Thông tin học viên
 
-- **Họ và tên:**
-- **MSSV:**
+- **Họ và tên:** Vũ Gia Khải
+- **MSSV:** 2A202602786
 - **Lớp:** K4-L3A
-- **Repository URL:**
+- **Repository URL:** https://github.com/vukhai248/K4-L3-DAY13-VuGiaKhai-2A202602786-Monitoring-LLMOps
 - **Commit SHA cuối:**
-- **Challenge ID:**
-- **Tên project Langfuse cá nhân:** `day13-k4-l3a-<MSSV>`
+- **Challenge ID:** chưa nhận (CP3 chạy practice scenario — xem mục 7)
+- **Tên project Langfuse cá nhân:** `day13-k4-l3a-2A202602786`
 
 ## 2. Evidence index
 
@@ -18,6 +18,10 @@
 
 | Evidence | Đường dẫn |
 |---|---|
+| Baseline load test (CP0) | `evidence/00-baseline-load-test.txt` |
+| Baseline log validator (CP0) | `evidence/00-baseline-validate-logs.txt` |
+| Baseline dashboard validator (CP0) | `evidence/00-baseline-validate-dashboard.txt` |
+| Baseline pytest (CP0) | `evidence/00-baseline-pytest.txt` |
 | Pytest cuối | `evidence/01-pytest.png` |
 | Log validator | `evidence/02-log-validator.png` |
 | Dashboard validator | `evidence/03-dashboard-validator.png` |
@@ -35,13 +39,15 @@
 
 ## 3. Kết quả kỹ thuật
 
+Baseline đo trên starter tại commit `13b6066`, trước khi sửa TODO (xem `evidence/00-baseline-*.txt`).
+
 | Nội dung | Baseline | Kết quả cuối | Nhận xét |
 |---|---|---|---|
-| `validate_logs.py` | | | |
-| `validate_dashboard.py` | | | |
-| `pytest` | | | |
-| Số traces hợp lệ | | | |
-| Số PII leak | | | |
+| `validate_logs.py` | 30/100 | | Baseline thấp vì `CorrelationIdMiddleware` còn để `correlation_id="MISSING"` và `main.py` chưa bind metadata |
+| `validate_dashboard.py` | HỢP LỆ 6/6 | | `config/dashboard.yaml` của starter đã đủ contract 6 panel ngay từ đầu |
+| `pytest` | 22 passed | | Test public của starter không kiểm tra correlation/enrichment nên vẫn xanh ở baseline |
+| Số traces hợp lệ | 0 | | Langfose trả 401 (xem mục 8, blocker) |
+| Số PII leak | 0 | | Baseline đã 0 vì `summarize_text()` tự scrub trước khi gọi log; phần còn thiếu là scrub ở tầng pipeline |
 | Latency P95 / TTFT P95 | | | |
 | Retrieval success rate | | | |
 
