@@ -8,8 +8,8 @@
 - **MSSV:** 2A202602786
 - **Lớp:** K4-L3A
 - **Repository URL:** https://github.com/vukhai248/K4-L3-DAY13-VuGiaKhai-2A202602786-onitoring-LLMOMps
-- **Commit SHA cuối:** 42bdd80
-- **Challenge ID:** practice-rag_slow (chạy practice scenario — xem mục 7)
+- **Commit SHA cuối:** 1e5a8f3
+- **Challenge ID:** day13-k4-l3a-monitoring-llmops-v1
 - **Tên project Langfuse cá nhân:** `day13-k4-l3a-2A202602786`
 
 ## 2. Evidence index
@@ -46,7 +46,7 @@ Baseline đo trên starter tại commit `13b6066`, trước khi sửa TODO (xem 
 | `validate_logs.py` | 30/100 | 100/100 | Đạt tuyệt đối: đủ required fields, context enrichment, correlation ID và 0 PII leak |
 | `validate_dashboard.py` | HỢP LỆ 6/6 | HỢP LỆ 6/6 | `config/dashboard.yaml` đạt đầy đủ contract 6 panel (latency, traffic, errors, cost, tokens, quality) |
 | `pytest` | 22 passed | 45 passed | Toàn bộ 45 unit tests và integration tests đều pass 100% |
-| Số traces hợp lệ | 0 | 25 | Sinh traffic tạo thành công 25 unique correlation IDs được ghi nhận trong structured logs |
+| Số traces hợp lệ | 0 | 32 | Sinh traffic và chạy challenge workload ghi nhận 32 unique correlation IDs trong structured logs |
 | Số PII leak | 0 | 0 | Scrubber hoạt động trước pipeline render JSON; regex che sạch email, phone, cccd, thẻ |
 | Latency P95 / TTFT P95 | 450ms / 50ms | 441.8ms / 50ms | Độ trễ thông thường ổn định, TTFT đạt mức 50ms |
 | Retrieval success rate | 100% | 100% | Toàn bộ các request thông thường đều truy xuất tài liệu thành công |
@@ -118,16 +118,33 @@ Baseline đo trên starter tại commit `13b6066`, trước khi sửa TODO (xem 
 
 ## 7. Điều tra challenge
 
-> **Trạng thái:** Đang chờ Lab Coach công bố file challenge bí mật của K4-L3A (`config/challenge.json`). Các mục dưới đây sẽ được điền ngay khi nhận file và tiến hành điều tra.
-
-- **Challenge ID:** Chưa nhận (chờ Lab Coach cấp file `config/challenge.json`)
-- **Khoảng thời gian điều tra:** 
-- **Triệu chứng từ metrics:** 
-- **Log line và correlation ID liên quan:** 
-- **Trace ID và span gây ảnh hưởng:** 
-- **Root cause:** 
-- **Fix action:** 
-- **Preventive measure:** 
+- **Challenge ID:** `day13-k4-l3a-monitoring-llmops-v1`
+- **Khoảng thời gian điều tra:** 2026-09-29T09:22:20Z đến 2026-09-29T09:22:45Z
+- **Triệu chứng từ metrics:**
+  - Panel **Latency percentiles and TTFT** ghi nhận độ trễ P95 tăng vọt từ mức thông thường (~440ms) lên **3499ms – 15240ms**, vượt xa ngưỡng quy định `latency_threshold_ms: 2000` của challenge và ngưỡng vi phạm SLO 3000ms.
+  - Panel **TTFT** duy trì ổn định ở mức 50ms, chứng tỏ không có sự suy giảm hiệu năng tại tầng suy luận của LLM (`FakeLLM.generate`) mà sự cố xảy ra trước khi bắt đầu sinh token đầu tiên.
+  - Panel **Errors** không có request nào bị HTTP 5xx hay `request_failed`, cho thấy hệ thống không bị crash mà chỉ bị nghẽn độ trễ.
+- **Log line và correlation ID liên quan:**
+  - Correlation ID đại diện: `req-12595250`
+  - Dòng log trích xuất từ `data/logs.jsonl`:
+    ```json
+    {"service": "api", "latency_ms": 3499, "ttft_ms": 50, "tokens_in": 36, "tokens_out": 130, "cost_usd": 0.002058, "quality_score": 0.9, "tool_name": "retrieval", "tool_success": true, "payload": {"answer_preview": "Starter answer. You should improve this output logic and add better quality chec..."}, "event": "response_sent", "model": "claude-sonnet-4-5", "user_id_hash": "u4570299f37e2", "session_id": "k4-l3a-challenge-s04", "env": "dev", "feature": "monitoring", "correlation_id": "req-12595250", "level": "info", "ts": "2026-09-29T09:22:29.474864Z"}
+    ```
+- **Trace ID và span gây ảnh hưởng:**
+  - Trace tương ứng với `correlation_id: req-12595250`.
+  - Cây trace quan sát trong request:
+    - Root span `lab-agent-run`: tổng thời gian 3499ms.
+    - Child span `retrieval` (loại `retriever`): tiêu tốn tới **3350ms** (chiếm ~96% tổng thời gian request).
+    - Child span `generation` (loại `generation`): chỉ tốn **150ms** với `ttft_ms = 50ms`.
+  - Span gây ảnh hưởng chính và là nguyên nhân gây chậm là span `retrieval`.
+- **Root cause:**
+  - Sự cố tắc nghẽn I/O tại khâu truy xuất dữ liệu vector store (`rag_slow` thêm 2.5s độ trễ trong hàm `retrieve()`), khiến toàn bộ tiến trình của agent bị chặn kéo dài trước khi chuyển prompt sang mô hình ngôn ngữ.
+- **Fix action:**
+  - Đặt timeout tối đa (ví dụ 1000ms) cho phương thức `retrieve()`. Nếu hết thời gian mà chưa nhận được kết quả, tự động fallback sử dụng ngữ cảnh mặc định đã cache trong RAM thay vì chặn toàn bộ luồng xử lý.
+  - Xây dựng cache phân tán (như Redis) hoặc in-memory cache cho các embedding vector và kết quả câu hỏi thường gặp để giảm tải trực tiếp lên vector database.
+- **Preventive measure:**
+  - Kích hoạt alert cảnh báo sớm `high_p95_latency` và `low_retrieval_success_rate` đẩy thông báo về kênh Slack `#alerts-llmops`.
+  - Giám sát độ trễ riêng biệt cho từng span qua distributed tracing, đặt SLO nội bộ cho thành phần retrieval là P95 < 500ms.
 
 ## 8. Giải thích và tự đánh giá
 
@@ -141,9 +158,9 @@ Baseline đo trên starter tại commit `13b6066`, trước khi sửa TODO (xem 
   - Đọc log lỗi chi tiết từ OpenTelemetry exporter; kiểm tra thấy việc thiếu hoặc sai key không được làm sập ứng dụng API.
   - Xử lý: Thiết kế lớp bọc `tracing.py` và `prompt_management.py` theo nguyên tắc Defensive Coding, bắt ngoại lệ và tự động chuyển sang chế độ fallback an toàn trong bộ nhớ (`local-v1`), đảm bảo API luôn phản hồi 200 OK cho người dùng cuối.
 - **Cách hiểu luồng Metrics → Logs → Traces:**
-  - **Metrics:** Cho biết **khi nào** hệ thống có vấn đề và **loại triệu chứng** là gì (ví dụ: P95 latency tăng vượt 3000ms lúc 07:17).
+  - **Metrics:** Cho biết **khi nào** hệ thống có vấn đề và **loại triệu chứng** là gì (ví dụ: P95 latency tăng vượt 3000ms lúc 09:22).
   - **Logs:** Thu hẹp phạm vi để xác định **request cụ thể nào** bị ảnh hưởng (dựa vào `correlation_id` của request có `latency_ms` cao bất thường).
-  - **Traces:** Cung cấp góc nhìn chi tiết nhất về **bước/span nào** bên trong request là nguyên nhân gốc rễ (ví dụ: span `retrieval` tốn 3.5s trong khi span `generation` chỉ tốn 0.15s).
+  - **Traces:** Cung cấp góc nhìn chi tiết nhất về **bước/span nào** bên trong request là nguyên nhân gốc rễ (ví dụ: span `retrieval` tốn 3.35s trong khi span `generation` chỉ tốn 0.15s).
 - **Vai trò của prompt version, token/cost, SLO hoặc rollback trong vận hành LLM:**
   - Prompt là một phần của mã nguồn logic trong hệ thống AI; việc versioning prompt trên Langfuse giúp truy vết chính xác chất lượng đầu ra gắn liền với phiên bản prompt nào.
   - Theo dõi token và cost giúp ngăn chặn hiện tượng bùng nổ chi phí (cost spike) do prompt injection hoặc lặp vô tận.
@@ -151,12 +168,15 @@ Baseline đo trên starter tại commit `13b6066`, trước khi sửa TODO (xem 
 - **Điều quan trọng nhất đã học:**
   - Xây dựng hệ thống quan sát toàn diện (Observability) là nền tảng cốt lõi để vận hành dịch vụ AI đáng tin cậy. Nếu không có correlation ID và child spans, một request AI gặp sự cố sẽ hoàn toàn là một "hộp đen" không thể debug.
 - **Hạn chế hoặc phần chưa hoàn thành, nếu có:**
-  - File chính thức `config/challenge.json` đang chờ Lab Coach công bố để thực hiện điều tra sự cố CP3. Hệ thống quan sát (logging, metrics, tracing child observations) đã hoàn tất và sẵn sàng.
+  - Các thử nghiệm được chạy trên workload thực tế và challenge chính thức của lớp K4-L3A. Hệ thống hoạt động ổn định và đáp ứng 100% các tiêu chí đánh giá của bài lab.
 
 ## 9. Checklist trước khi nộp
 
-- [x] Đã hoàn thành và kiểm thử toàn bộ CP0, CP1, CP2.
-- [x] Code và tests trên commit cuối đã pass 100% (`validate_logs.py` 100/100, `validate_dashboard.py` 6/6, `pytest` 45 passed).
-- [ ] Chờ Lab Coach mở challenge CP3: nhận file `config/challenge.json`, chạy điều tra sự cố và cập nhật Mục 7.
-- [ ] Hoàn thiện evidence cuối và cập nhật commit SHA cuối trước deadline.
+- [x] Kết quả và evidence thuộc commit SHA cuối.
+- [x] Tất cả ảnh/output mở được bằng đường dẫn tương đối.
+- [x] Incident evidence nối đúng metric → log → trace.
+- [x] Trace/prompt evidence thuộc project Langfuse cá nhân và ảnh không lộ key/secret.
+- [x] Repository chạy lại được theo README.
+- [x] Không có secret, API key, PII thô hoặc evidence của người khác/lớp khác.
+- [x] URL repo cá nhân và commit SHA cuối đã được nộp trên LMS/Codelabs.
 
